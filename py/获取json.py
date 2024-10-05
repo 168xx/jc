@@ -1,48 +1,41 @@
 import requests  
-import os  
 import json  
+import os  
   
 # 接口的URL  
-url = 'https://12.qqwxx.cn/kx/a.json'  # 请替换为您的实际接口URL  
+url = 'https://12.qqwxx.cn/kx/a.json'  # 请将此URL替换为您的实际接口URL  
   
-# 发送HTTP GET请求  
+# 发送HTTP GET请求到接口  
 response = requests.get(url)  
   
 # 检查请求是否成功  
 if response.status_code == 200:  
-    # 解析JSON数据  
-    try:  
-        data = response.json()  
-          
-        # 假设JSON响应包含一个名为'files'的列表，每个元素都是一个包含文件URL的字典  
-        files = data.get('files', [])  
-          
-        # 遍历文件列表  
-        for file_info in files:  
-            file_url = file_info.get('url')  # 获取文件URL  
-            file_name = os.path.basename(file_url.split('?')[0])  # 从URL中提取文件名，去除查询参数  
+    # 获取接口的JSON响应  
+    data = response.json()  
+      
+    # 将解析后的数据保存到本地文件  
+    json_output_file = os.path.join(os.getcwd(), 'output_data.json')  
+    with open(json_output_file, 'w', encoding='utf-8') as f:  
+        json.dump(data, f, ensure_ascii=False, indent=4)  
+      
+    # 假设接口响应中包含文件的URL，我们需要下载这些文件  
+    # 这里我们假设响应中有一个名为'files'的键，其值是一个包含文件URL的列表  
+    # 注意：这只是一个示例，您需要根据实际的接口响应结构来调整代码  
+    if 'files' in data:  
+        for file_url in data['files']:  
+            file_name = os.path.basename(file_url)  # 从URL中提取文件名  
+            file_path = os.path.join(os.getcwd(), file_name)  
+            file_response = requests.get(file_url)  
               
-            # 发送HTTP GET请求下载文件  
-            with requests.get(file_url, stream=True) as r:  
-                # 检查下载请求是否成功  
-                if r.status_code == 200:  
-                    # 指定保存文件的路径（可以根据需要修改）  
-                    save_path = 'downloaded_files/'  
-                    os.makedirs(save_path, exist_ok=True)  # 确保目录存在  
-                    full_file_path = os.path.join(save_path, file_name)  
-                      
-                    # 以二进制模式打开文件并写入数据  
-                    with open(full_file_path, 'wb') as f:  
-                        for chunk in r.iter_content(chunk_size=8192):  
-                            f.write(chunk)  
-                      
-                    print(f"文件 {file_name} 已成功保存到 {full_file_path}")  
-                else:  
-                    # 下载请求失败，打印错误信息  
-                    print(f"下载文件 {file_name} 失败，状态码：{r.status_code}")  
-    except json.JSONDecodeError:  
-        # 如果JSON解析失败，打印错误信息  
-        print("JSON解析失败，可能返回的不是有效的JSON数据。")  
+            if file_response.status_code == 200:  
+                with open(file_path, 'wb') as fb:  
+                    fb.write(file_response.content)  
+                print(f"文件 {file_name} 已成功下载")  
+            else:  
+                print(f"无法下载文件 {file_name}，状态码：{file_response.status_code}")  
+      
+    # 打印成功消息  
+    print("数据已成功保存到output_data.json文件中，并尝试下载所有相关文件")  
 else:  
-    # 初始请求失败，打印错误信息  
-    print(f"请求失败，状态码：{response.status_code}，错误信息：{response.text}")
+    # 打印错误信息  
+    print(f"请求失败，状态码：{response.status_code}")
