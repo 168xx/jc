@@ -15,7 +15,7 @@ import replace
 import fileinput
 
 #  获取远程直播源文件
-url = "https://raw.githubusercontent.com/168xx/zdgx/refs/heads/main/tv/tv.txt"          #源采集地址
+url = "https://raw.githubusercontent.com/168xx/cj/refs/heads/main/tv/%E7%BD%91%E7%BB%9C%E6%94%B6%E9%9B%86.txt"          #源采集地址
 r = requests.get(url)
 open('1.txt','wb').write(r.content)         #打开源文件并临时写入
 
