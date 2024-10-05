@@ -23,14 +23,8 @@ jobs:
       run: |
         pip install -r requirements.txt
 
-- name: Install dependencies  
-  run: |  
-    python -m pip install --upgrade pip  
-    pip install requests  
-   
-- name: Run script  
-  run: python /home/runner/work/jc/jc/py/获取json.py
-
+    - name: Run py
+      run: python ${{ github.workspace }}/py/更新json.py
 
       # 提交和推送的步骤，不再检查文件是否发生变化
     - name: Commit and push changes
