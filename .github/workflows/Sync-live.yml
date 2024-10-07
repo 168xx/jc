@@ -3,7 +3,10 @@ name: Sync live.txt from cj Repo
 on:  
   schedule:  
     - cron: '0 */6 * * *'  # 每6小时运行一次  
-  
+    workflow_dispatch:
+    分支:
+      - main    
+
 jobs:  
   sync-live-txt:  
     runs-on: ubuntu-latest  
