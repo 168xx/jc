@@ -26,15 +26,13 @@ jobs:
         rm -f tv/V6.m3u && wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O tv/V6.m3u
 
 
-    - name: Clean
-      run: |
-        git config --local user.email "github-actions[bot]@users.noreply.github.com"
-        git config --local user.name "github-actions[bot]"
-        git checkout --orphan latest_branch
-        git add -A
-        git commit -am "$DATE"
-        git branch -D main
-        git branch -m main
-
-    - name: Push
-      run: git push -f origin main
+- name: Update and Commit  
+  run: |  
+    # ...（之前的更新步骤，如 rm 和 wget）  
+    git config --local user.email "github-actions[bot]@users.noreply.github.com"  
+    git config --local user.name "github-actions[bot]"  
+    git add -A  
+    git commit -am "Update TV lists on $(date +'%Y-%m-%d %H:%M:%S CST')"  
+   
+- name: Push Changes  
+  run: git push origin main
