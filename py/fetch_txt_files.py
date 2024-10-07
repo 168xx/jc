@@ -4,7 +4,7 @@ import shutil
   
 # GitHub repository details  
 PRIVATE_REPO_OWNER = "168xx"  
-PRIVATE_REPO_NAME = "tv"  
+PRIVATE_REPO_NAME = "cj/tv"  
 PRIVATE_REPO_BRANCH = "main"  # Replace with your branch name  
 TOKEN = os.getenv("GITHUB_TOKEN")  
 IP_FOLDER = "IP"  
