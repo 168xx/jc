@@ -1,5 +1,4 @@
-name: Fetch live.txt from Private Repository  
-    
+name: Fetch live    
 on:  
   schedule:  
     - cron: '0 */3 * * *'  # 每3小时的每小时第0分钟运行  
