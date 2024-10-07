@@ -1,40 +1,48 @@
-name: Fetch TXT Files  
+name: Sync live.txt from cj Repo  
   
 on:  
-  workflow_dispatch:  # You can trigger this workflow manually from the GitHub UI  
-  # Uncomment the following line to run the workflow on a schedule, e.g., every day at midnight  
-  # schedule:  
-  #   - cron: '0 0 * * *'  
+  schedule:  
+    - cron: '0 */6 * * *'  # 每6小时运行一次  
   
 jobs:  
-  fetch-txt-files:  
+  sync-live-txt:  
     runs-on: ubuntu-latest  
-  
-    env:  
-      GITHUB_TOKEN: ${{ secrets.GITHUB_PERSONAL_ACCESS_TOKEN }}  # Use the secret you created in the repository settings  
-  
     steps:  
-    - name: Checkout the current repository  
-      uses: actions/checkout@v2  
+      - name: Checkout current repository  
+        uses: actions/checkout@v2  
   
-    - name: Set up Python  
-      uses: actions/setup-python@v2  
-      with:  
-        python-version: '3.x'  
+      - name: Set up Git  
+        run: |  
+          git config --global url."https://${GITHUB_ACTOR}:${PRIVATE_REPO_PAT}@github.com/".insteadOf "https://github.com/"  
+        env:  
+          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  
   
-    - name: Install dependencies  
-      run: |  
-        python -m pip install --upgrade pip  
-        # Install any other dependencies if needed  
+      - name: Clone specific file from private repository  
+        run: |  
+          # 使用 sparse-checkout 克隆特定文件  
+          git init cj-repo-clone  
+          cd cj-repo-clone  
+          git remote add origin https://github.com/168xx/cj.git  
+          git config core.sparseCheckout true  
+          echo "tv/live.txt" >> .git/info/sparse-checkout  
+          git pull origin main --depth=1  # 假设文件在 main 分支上，且深度为1足以获取文件  
+        env:  
+          GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}   
+      # 注意：上面的步骤中，我们实际上没有使用GITHUB_TOKEN来克隆仓库，因为我们已经通过全局Git配置设置了PAT。  
+      # 如果GitHub Actions环境变量中的GITHUB_TOKEN导致混淆，可以简单地移除或重命名该环境变量声明。  
   
-    - name: Fetch and copy TXT files  
-      run: |  
-        python ${{ github.workspace }}/py/fetch_txt_files.py  
+      - name: Copy live.txt to IP folder  
+        run: |  
+          mkdir -p IP  
+          cp cj-repo-clone/tv/live.txt IP/  
   
-    - name: Commit and push changes  
-      run: |  
-       git config --local user.email "actions@126.com"
-       git config --local user.name "GitHub Action"
-        git add IP/  
-        git commit -m "Fetched TXT files from private repository" || true  
-        git push
+      - name: Commit and push changes  
+        run: |  
+          git add IP/live.txt  
+          git config --local user.email "action@github.com"  
+          git config --local user.name "GitHub Action"  
+          # 检查是否有更改要提交  
+          if [ -n "$(git status --porcelain)" ]; then  
+            git commit -m "Sync live.txt from cj repo"  
+            git push  
+          fi
