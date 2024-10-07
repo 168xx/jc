@@ -31,9 +31,7 @@ jobs:
           git pull origin main --depth=1  # 假设文件在 main 分支上，且深度为1足以获取文件  
         env:  
           GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}   
-      # 注意：上面的步骤中，我们实际上没有使用GITHUB_TOKEN来克隆仓库，因为我们已经通过全局Git配置设置了PAT。  
-      # 如果GitHub Actions环境变量中的GITHUB_TOKEN导致混淆，可以简单地移除或重命名该环境变量声明。  
-  
+
       - name: Copy live.txt to IP folder  
         run: |  
           mkdir -p IP  
