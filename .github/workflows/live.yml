@@ -3,34 +3,34 @@ on:
   schedule:  
     - cron: '0 */3 * * *'  # 每3小时的每小时第0分钟运行  
   
-jobs:  
-  fetch-live-txt:  
-    runs-on: ubuntu-latest  
+steps:  
+  - name: Checkout current repository  
+    uses: actions/checkout@v2  
   
+  - name: Create IP directory if it doesn't exist  
+    run: mkdir -p IP  
+  
+  - name: Fetch live.txt from private repository using GitHub API  
     env:  
-      TARGET_REPO_OWNER: '168xx'  # 目标私有仓库的所有者  
-      TARGET_REPO_NAME: 'cj'          # 目标私有仓库的名称  
-      TARGET_FILE_PATH: 'tv/live.txt' # 目标文件的路径  
-      SAVE_DIR: 'IP'                  # 保存文件的目录  
-      GITHUB_TOKEN: ${{ secrets.MY_PRIVATE_REPO_ACCESS_TOKEN }}  # 存储的PAT Secret名称  
+      GITHUB_API_URL: "https://api.github.com/repos/168xx/cj/contents/tv/live.txt"  
+      GITHUB_TOKEN: ${{ secrets.MY_PRIVATE_REPO_ACCESS_TOKEN }}  
+    run: |  
+      curl -H "Authorization: token ${GITHUB_TOKEN}" -o IP/live.txt ${GITHUB_API_URL}?ref=main  
+  - name: Fetch and decode live.txt from private repository using GitHub API and jq  
+    env:  
+      GITHUB_API_URL: "https://api.github.com/repos/168xx/cj/contents/tv/live.txt"  
+      GITHUB_TOKEN: ${{ secrets.MY_PRIVATE_REPO_ACCESS_TOKEN }}  
+      BRANCH_NAME: main  # 替换为目标分支的名称  
+    run: |  
+      response=$(curl -H "Authorization: token ${GITHUB_TOKEN}" "${GITHUB_API_URL}?ref=${BRANCH_NAME}")  
+      content_base64=$(echo "$response" | jq -r '.content')  
+      content_decoded=$(echo "$content_base64" | base64 --decode)  
+      echo "$content_decoded" > IP/live.txt  
   
-    steps:  
-      - name: Checkout current repository  
-        uses: actions/checkout@v2  
+  # 注意：上面的步骤假设您已经安装了 jq。如果没有，您需要在 Workflow 中添加一个步骤来安装它。  
   
-      - name: Set up Git  
-        run: |  
-          git config --global url."https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"  
-  
-      - name: Fetch live.txt from private repository  
-        run: |  
-          # 使用git clone来获取私有仓库的内容（需要PAT认证）  
-          git clone https://github.com/${TARGET_REPO_OWNER}/${TARGET_REPO_NAME}.git temp-repo  
-          cp temp-repo/${TARGET_FILE_PATH} ${SAVE_DIR}/live.txt  
-          rm -rf temp-repo  # 删除临时克隆的仓库  
-  
-      - name: Commit and push changes  
-        run: |  
-          git add ${SAVE_DIR}/live.txt  
-          git commit -m "Automated update of live.txt from ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME}"  
-          git push
+  - name: Commit and push changes  
+    run: |  
+      git add IP/live.txt  
+      git commit -m "Automated update of live.txt from 168xx/cj"  
+      git push
