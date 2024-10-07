@@ -1,0 +1,37 @@
+name: Fetch live.txt from Private Repository  
+    
+on:  
+  schedule:  
+    - cron: '0 */3 * * *'  # 每3小时的每小时第0分钟运行  
+  
+jobs:  
+  fetch-live-txt:  
+    runs-on: ubuntu-latest  
+  
+    env:  
+      TARGET_REPO_OWNER: '168xx'  # 目标私有仓库的所有者  
+      TARGET_REPO_NAME: 'cj'          # 目标私有仓库的名称  
+      TARGET_FILE_PATH: 'tv/live.txt' # 目标文件的路径  
+      SAVE_DIR: 'IP'                  # 保存文件的目录  
+      GITHUB_TOKEN: ${{ secrets.MY_PRIVATE_REPO_ACCESS_TOKEN }}  # 存储的PAT Secret名称  
+  
+    steps:  
+      - name: Checkout current repository  
+        uses: actions/checkout@v2  
+  
+      - name: Set up Git  
+        run: |  
+          git config --global url."https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"  
+  
+      - name: Fetch live.txt from private repository  
+        run: |  
+          # 使用git clone来获取私有仓库的内容（需要PAT认证）  
+          git clone https://github.com/${TARGET_REPO_OWNER}/${TARGET_REPO_NAME}.git temp-repo  
+          cp temp-repo/${TARGET_FILE_PATH} ${SAVE_DIR}/live.txt  
+          rm -rf temp-repo  # 删除临时克隆的仓库  
+  
+      - name: Commit and push changes  
+        run: |  
+          git add ${SAVE_DIR}/live.txt  
+          git commit -m "Automated update of live.txt from ${TARGET_REPO_OWNER}/${TARGET_REPO_NAME}"  
+          git push
