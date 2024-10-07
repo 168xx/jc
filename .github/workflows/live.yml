@@ -1,0 +1,40 @@
+name: Update
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 0 * * *'
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  Update:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: GetTime
+      run: echo "DATE=$(date +'%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_ENV
+
+    - name: Update
+      run: |
+        # 频道
+        rm -f tv/ipv4.txt && wget https://raw.githubusercontent.com/vbskycn/iptv/refs/heads/master/tv/iptv4.txt -O tv/ipv4.txt
+        rm -f tv/tv.txt && wget https://raw.githubusercontent.com/kimwang1978/collect-tv-txt/refs/heads/main/merged_output_simple.txt -O tv/tv.txt
+        rm -f tv/V6.m3u && wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O tv/V6.m3u
+
+
+    - name: Clean
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git checkout --orphan latest_branch
+        git add -A
+        git commit -am "$DATE"
+        git branch -D main
+        git branch -m main
+
+    - name: Push
+      run: git push -f origin main
