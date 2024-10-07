@@ -3,10 +3,7 @@ name: Sync live.txt from cj Repo
 on:  
   schedule:  
     - cron: '0 */6 * * *'  # 每6小时运行一次  
-    workflow_dispatch:
-    分支:
-      - main    
-
+  
 jobs:  
   sync-live-txt:  
     runs-on: ubuntu-latest  
@@ -20,30 +17,25 @@ jobs:
         env:  
           PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  
   
-      - name: Clone specific file from private repository  
+      # 添加步骤以克隆或同步源仓库的 live.txt 文件  
+      - name: Clone source repository and sync live.txt  
         run: |  
-          # 使用 sparse-checkout 克隆特定文件  
-          git init cj-repo-clone  
-          cd cj-repo-clone  
-          git remote add origin https://github.com/168xx/cj.git  
-          git config core.sparseCheckout true  
-          echo "tv/live.txt" >> .git/info/sparse-checkout  
-          git pull origin main --depth=1  # 假设文件在 main 分支上，且深度为1足以获取文件  
-        env:  
-          GITHUB_TOKEN: ${{ secrets.PRIVATE_REPO_PAT }}   
-
-      - name: Copy live.txt to IP folder  
-        run: |  
-          mkdir -p IP  
-          cp cj-repo-clone/tv/live.txt IP/  
-  
-      - name: Commit and push changes  
-        run: |  
-          git add IP/live.txt  
-          git config --local user.email "action@github.com"  
-          git config --local user.name "GitHub Action"  
-          # 检查是否有更改要提交  
+          # 克隆源仓库（假设源仓库为 cj/source-repo）  
+          git clone https://${GITHUB_ACTOR}:${PRIVATE_REPO_PAT}@github.com/cj/source-repo.git source-repo  
+            
+          # 切换到当前仓库的工作目录  
+          cd ${GITHUB_WORKSPACE}  
+            
+          # 复制 live.txt 文件到当前仓库  
+          cp IP/live.txt .  
+            
+          # 添加更改到暂存区  
+          git add live.txt  
+            
+          # 提交更改（如果有的话），并推送到当前仓库  
           if [ -n "$(git status --porcelain)" ]; then  
-            git commit -m "Sync live.txt from cj repo"  
+            git commit -m "Automated sync of live.txt from cj/source-repo"  
             git push  
-          fi
+          fi  
+        env:  
+          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  
