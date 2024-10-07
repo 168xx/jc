@@ -25,14 +25,12 @@ jobs:
         rm -f tv/tv.txt && wget https://raw.githubusercontent.com/kimwang1978/collect-tv-txt/refs/heads/main/merged_output_simple.txt -O tv/tv.txt
         rm -f tv/V6.m3u && wget https://raw.githubusercontent.com/fanmingming/live/main/tv/m3u/ipv6.m3u -O tv/V6.m3u
 
-
-- name: Update and Commit  
-  run: |  
-    # ...（之前的更新步骤，如 rm 和 wget）  
-    git config --local user.email "github-actions[bot]@users.noreply.github.com"  
-    git config --local user.name "github-actions[bot]"  
-    git add -A  
-    git commit -am "Update TV lists on $(date +'%Y-%m-%d %H:%M:%S CST')"  
-   
-- name: Push Changes  
-  run: git push origin main
+    - name: Commit and push changes
+      run: |
+          git config --local user.email "actions@126.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          # 即使没有文件改变，也会提交一个空的提交
+          git commit --allow-empty -m "Scheduled workflow run"
+          git pull --rebase
+          git push -f
