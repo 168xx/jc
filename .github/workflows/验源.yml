@@ -29,7 +29,7 @@ jobs:
   
     - name: Fetch and copy TXT files  
       run: |  
-        python fetch_txt_files.py  
+        python ${{ github.workspace }}/py/fetch_txt_files.py  
   
     - name: Commit and push changes  
       run: |  
