@@ -1,58 +1,63 @@
-name: Copy Files from Private Repo  
+name: Copy Files from Private Repo to Live Folder  
   
 on:  
-  workflow_dispatch:  # 手动触发  
+  workflow_dispatch:  
   
 jobs:  
-  copy-files:  
+  copy-and-commit:  
     runs-on: ubuntu-latest  
     steps:  
       - name: Checkout current repository  
         uses: actions/checkout@v2  
         with:  
-          fetch-depth: 0  # 获取所有历史记录  
+          fetch-depth: 0  # Fetch all history for all branches and tags  
   
-      - name: Set up Git user info  
-        run: |  
-          git config --global user.name 'github-actions-bot'  
-          git config --global user.email 'github-actions-bot@github.com'  
-  
-      - name: Add private repository SSH key  
+      # Set up SSH agent for private repository access  
+      - name: Set up SSH keys  
+        env:  
+          SSH_AUTH_SOCK: /tmp/ssh-agent.sock  
         run: |  
           mkdir -p ~/.ssh  
-          echo "${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa  
-          chmod 600 ~/.ssh/id_rsa  
+          ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null  
+          ssh-add - <<< "${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}"  
           ssh-keyscan github.com >> ~/.ssh/known_hosts  
-        env:  
-          PRIVATE_REPO_SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}  
   
+      # Clone the private repository  
       - name: Clone private repository  
         run: |  
           git clone git@github.com:168xx/zdgx.git ./private-repo  
   
-      - name: Copy files to live folder  
+      # Copy files from private repo to live folder  
+      - name: Copy files  
         run: |  
-          cp ./private-repo/tv/*.txt ./private-repo/tv/*.m3u ./live/  
+          cp -r ./private-repo/tv/*.{txt,m3u} ./live/  
   
+      # Stage and commit changes  
       - name: Stage changes  
         run: |  
           git add live/  
   
       - name: Commit changes  
         run: |  
-          if [ -n "$(git status --porcelain)" ]; then  
-            git commit -m "Copied .txt and .m3u files from private repository to live folder"  
-          else  
-            echo "No changes to commit"  
-          fi  
+          git config --local user.name 'github-actions'  
+          git config --local user.email 'github-actions@github.com'  
+          git commit -m "Copied .txt and .m3u files from private repository to live folder" || true  
+          # The `|| true` ensures that the step doesn't fail if there are no changes to commit  
   
+      # Push changes to the current repository  
       - name: Push changes  
-        run: |  
-          git push  
-        env:  
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+        uses: ad-m/github-push-action@master  
+        with:  
+          github_token: ${{ secrets.GITHUB_TOKEN }}  
+          branch: ${{ github.ref_name }}  # Push to the branch that triggered the workflow  
   
-secrets:  
-  PRIVATE_REPO_SSH_PRIVATE_KEY:  
-    description: 'Private SSH key to clone the private repository'  
-    required: true
+# Note: The secrets section is not part of the workflow YAML file.  
+# It should be configured in the repository settings on GitHub.  
+# secrets:  
+#   PRIVATE_REPO_SSH_PRIVATE_KEY:  
+#     description: 'Private SSH key to clone the private repository'  
+#     required: true  
+#   GITHUB_TOKEN:  
+#     description: 'GitHub token for pushing changes to the repository'  
+#     required: true  
+# (These secrets are managed via the GitHub repository's settings page, not in the YAML file.)
