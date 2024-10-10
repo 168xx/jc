@@ -15,11 +15,11 @@ def copy_files(src_dir, dest_dir):
 if __name__ == "__main__":  
     import sys  
       
-    if len(sys.argv) != 2:  
-        print("Usage: python3 copy_files.py <source_directory>")  
+    if len(sys.argv) != 3:  
+        print("Usage: python3 copy_files.py <source_directory> <destination_directory>")  
         sys.exit(1)  
       
     src_directory = sys.argv[1]  
-    dest_directory = os.getcwd()  # 当前工作目录，即GitHub Actions的工作区  
+    dest_directory = sys.argv[2]  
       
     copy_files(src_directory, dest_directory)
