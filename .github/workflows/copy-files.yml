@@ -24,10 +24,10 @@ jobs:
         run: |  
           git clone https://${PRIVATE_REPO_PAT}@github.com/${PRIVATE_REPO_URL}.git private-repo  
   
-      - name: Copy Specific Files  
+   - name: Copy Specific Files  
         run: |  
-          python3 <<path-to-your-script>>/copy_files.py private-repo/tv  
-        working-directory: ${{ github.workspace }}  # 确保工作目录设置正确  
+          python3 copy_files.py private-repo/tv  
+        working-directory: ${{ github.workspace }}
   
       - name: Stage Changes  
         run: |  
