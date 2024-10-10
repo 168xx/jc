@@ -12,25 +12,37 @@ jobs:
         with:  
           fetch-depth: 0  # Fetch all history for all branches and tags  
   
-      # Set up SSH agent for private repository access  
-      - name: Set up SSH keys  
-        env:  
-          SSH_AUTH_SOCK: /tmp/ssh-agent.sock  
+      # Set up a temporary directory for the SSH key  
+      - name: Create temporary directory  
         run: |  
-          mkdir -p ~/.ssh  
-          ssh-agent -a "$SSH_AUTH_SOCK" > /dev/null  
-          ssh-add - <<< "${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}"  
+          mkdir -p ~/.ssh_temp  
+  
+      # Write the private key to a temporary file  
+      - name: Write private key to temporary file  
+        env:  
+          SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}  
+        run: |  
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh_temp/id_rsa  
+          chmod 600 ~/.ssh_temp/id_rsa  
+  
+      # Set up SSH agent and add the private key  
+      - name: Set up SSH agent  
+        run: |  
+          eval "$(ssh-agent -s)"  
+          ssh-add ~/.ssh_temp/id_rsa  
           ssh-keyscan github.com >> ~/.ssh/known_hosts  
   
       # Clone the private repository  
       - name: Clone private repository  
         run: |  
           git clone git@github.com:168xx/zdgx.git ./private-repo  
+        env:  
+          GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=no -i ~/.ssh_temp/id_rsa  
   
       # Copy files from private repo to live folder  
       - name: Copy files  
         run: |  
-          cp -r ./private-repo/tv/*.{txt,m3u} ./live/  
+          cp -r ./zdgx/tv/* ./live/  
   
       # Stage and commit changes  
       - name: Stage changes  
@@ -41,23 +53,17 @@ jobs:
         run: |  
           git config --local user.name 'github-actions'  
           git config --local user.email 'github-actions@github.com'  
-          git commit -m "Copied .txt and .m3u files from private repository to live folder" || true  
-          # The `|| true` ensures that the step doesn't fail if there are no changes to commit  
+          git commit -m "Copied files from private repository to live folder" || true  
   
       # Push changes to the current repository  
       - name: Push changes  
         uses: ad-m/github-push-action@master  
         with:  
           github_token: ${{ secrets.GITHUB_TOKEN }}  
-          branch: ${{ github.ref_name }}  # Push to the branch that triggered the workflow  
+          branch: ${{ github.ref_name }}  
   
-# Note: The secrets section is not part of the workflow YAML file.  
-# It should be configured in the repository settings on GitHub.  
-# secrets:  
-#   PRIVATE_REPO_SSH_PRIVATE_KEY:  
-#     description: 'Private SSH key to clone the private repository'  
-#     required: true  
-#   GITHUB_TOKEN:  
-#     description: 'GitHub token for pushing changes to the repository'  
-#     required: true  
-# (These secrets are managed via the GitHub repository's settings page, not in the YAML file.)
+      # Clean up temporary files  
+      - name: Clean up temporary files  
+        if: always()  
+        run: |  
+          rm -rf ~/.ssh_temp
