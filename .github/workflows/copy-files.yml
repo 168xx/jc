@@ -1,13 +1,13 @@
 name: Copy Files from Private Repo  
   
 on:  
-  workflow_dispatch:  # 手动触发工作流  
+  workflow_dispatch:  
   
 jobs:  
   copy-files:  
     runs-on: ubuntu-latest  
     permissions:  
-      contents: write  # 允许对工作区的内容进行写操作  
+      contents: write  
     steps:  
       - name: Checkout Main Repo  
         uses: actions/checkout@v3  
@@ -19,21 +19,22 @@ jobs:
   
       - name: Clone Private Repo  
         env:  
-          PRIVATE_REPO_URL: ${{ secrets.PRIVATE_REPO_URL }}  # 替换为你的私有仓库URL（去掉https://github.com/和.git）  
-          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  # 替换为你的个人访问令牌  
+          PRIVATE_REPO_URL: ${{ secrets.PRIVATE_REPO_URL }}  
+          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  
         run: |  
           git clone https://${PRIVATE_REPO_PAT}:x-oauth-basic@github.com/${PRIVATE_REPO_URL}.git private-repo  
   
       - name: Copy Specific Files  
         run: |  
-          python3 copy_files.py private-repo/path/to/directory  # 替换为私有仓库中文件的实际路径  
+          python3 copy_files.py private-repo/path/to/source main-repo-files  # 替换为私有仓库中的源路径和目标目录  
         working-directory: ${{ github.workspace }}  
   
       - name: Stage Changes  
         run: |  
           git config --local user.email "github-actions@github.com"  
           git config --local user.name "github-actions"  
-          git add *.txt *.m3u  # 添加所有.txt和.m3u文件到暂存区  
+          # 只添加 main-repo-files 目录下的 .txt 和 .m3u 文件  
+          find main-repo-files -type f \( -iname "*.txt" -o -iname "*.m3u" \) -exec git add {} \;  
   
       - name: Commit and Push Changes  
         run: |  
