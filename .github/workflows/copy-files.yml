@@ -1,69 +1,39 @@
-name: Copy Files from Private Repo to Live Folder  
+name: Copy Files from Private Repo  
   
 on:  
-  workflow_dispatch:  
+  workflow_dispatch:  # 手动触发，或者根据需要设置为其他事件，如定时触发  
   
 jobs:  
-  copy-and-commit:  
+  copy-files:  
     runs-on: ubuntu-latest  
+    permissions:  
+      contents: 'write'  # 允许写入当前仓库的内容  
+      repositories: 'read'  # 允许读取其他仓库的内容（需要额外的配置）  
+  
     steps:  
       - name: Checkout current repository  
         uses: actions/checkout@v2  
-        with:  
-          fetch-depth: 0  # Fetch all history for all branches and tags  
   
-      # Set up a temporary directory for the SSH key  
-      - name: Create temporary directory  
+      - name: Set up Git  
         run: |  
-          mkdir -p ~/.ssh_temp  
+          git config --global user.name 'github-actions'  
+          git config --global user.email 'github-actions@github.com'  
   
-      # Write the private key to a temporary file  
-      - name: Write private key to temporary file  
-        env:  
-          SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}  
-        run: |  
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh_temp/id_rsa  
-          chmod 600 ~/.ssh_temp/id_rsa  
-  
-      # Set up SSH agent and add the private key  
-      - name: Set up SSH agent  
-        run: |  
-          eval "$(ssh-agent -s)"  
-          ssh-add ~/.ssh_temp/id_rsa  
-          ssh-keyscan github.com >> ~/.ssh/known_hosts  
-  
-      # Clone the private repository  
       - name: Clone private repository  
-        run: |  
-          git clone git@github.com:168xx/zdgx.git ./private-repo  
         env:  
-          GIT_SSH_COMMAND: ssh -o StrictHostKeyChecking=no -i ~/.ssh_temp/id_rsa  
-  
-      # Copy files from private repo to live folder  
-      - name: Copy files  
+          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  # 在仓库的 Settings > Secrets 中添加此个人访问令牌  
         run: |  
-          cp -r ./zdgx/tv/* ./live/  
+          git clone https://${PRIVATE_REPO_PAT}:@github.com/168xx/zdgx.git private-repo  
   
-      # Stage and commit changes  
-      - name: Stage changes  
+      - name: Copy txt and m3u files to live folder  
         run: |  
-          git add live/  
+          mkdir -p live  
+          cp -r private-repo/tv/*.txt private-repo/tv/*.m3u live/  
   
-      - name: Commit changes  
+      - name: Commit and push changes  
         run: |  
-          git config --local user.name 'github-actions'  
-          git config --local user.email 'github-actions@github.com'  
-          git commit -m "Copied files from private repository to live folder" || true  
-  
-      # Push changes to the current repository  
-      - name: Push changes  
-        uses: ad-m/github-push-action@master  
-        with:  
-          github_token: ${{ secrets.GITHUB_TOKEN }}  
-          branch: ${{ github.ref_name }}  
-  
-      # Clean up temporary files  
-      - name: Clean up temporary files  
-        if: always()  
-        run: |  
-          rm -rf ~/.ssh_temp
+          git add live  
+          if [ -n "$(git status --porcelain)" ]; then  
+              git commit -m "Copied txt and m3u files from private repo"  
+              git push  
+          fi
