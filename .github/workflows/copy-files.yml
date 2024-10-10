@@ -1,7 +1,7 @@
 name: Copy Files from Private Repo  
   
 on:  
-  workflow_dispatch:  # 手动触发，或者根据需要设置其他触发事件，如 schedule  
+  workflow_dispatch:  # 手动触发  
   
 jobs:  
   copy-files:  
@@ -10,44 +10,49 @@ jobs:
       - name: Checkout current repository  
         uses: actions/checkout@v2  
         with:  
-          persist-credentials: false  
-          fetch-depth: 0  # 获取所有历史记录以便我们可以推送更改  
+          fetch-depth: 0  # 获取所有历史记录  
   
-      - name: Set up Git  
+      - name: Set up Git user info  
         run: |  
-          git config --global user.name 'github-actions'  
-          git config --global user.email 'github-actions@github.com'  
+          git config --global user.name 'github-actions-bot'  
+          git config --global user.email 'github-actions-bot@github.com'  
   
-      - name: Install SSH key for private repository access  
+      - name: Add private repository SSH key  
         run: |  
           mkdir -p ~/.ssh  
-          echo "${{ secrets.PRIVATE_REPO_SSH_KEY }}" > ~/.ssh/id_rsa  
+          echo "${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa  
           chmod 600 ~/.ssh/id_rsa  
           ssh-keyscan github.com >> ~/.ssh/known_hosts  
         env:  
-          PRIVATE_REPO_SSH_KEY: ${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}  
+          PRIVATE_REPO_SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}  
   
       - name: Clone private repository  
         run: |  
-          git clone git@github.com:168xx/zdgx.git private-repo  
+          git clone git@github.com:168xx/zdgx.git ./private-repo  
   
-      - name: Copy .txt and .m3u files to live folder  
+      - name: Copy files to live folder  
         run: |  
-          cp -r private-repo/tv/*.txt private-repo/tv/*.m3u ./live/  
+          cp ./private-repo/tv/*.txt ./private-repo/tv/*.m3u ./live/  
   
-      - name: Commit and push changes  
+      - name: Stage changes  
         run: |  
           git add live/  
+  
+      - name: Commit changes  
+        run: |  
           if [ -n "$(git status --porcelain)" ]; then  
-            git commit -m "Copied .txt and .m3u files from private repository"  
-            git push  
+            git commit -m "Copied .txt and .m3u files from private repository to live folder"  
           else  
             echo "No changes to commit"  
           fi  
+  
+      - name: Push changes  
+        run: |  
+          git push  
         env:  
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # 确保这个 token 有对当前仓库的写权限  
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
   
 secrets:  
   PRIVATE_REPO_SSH_PRIVATE_KEY:  
-    description: 'Private SSH key to access the private repository'  
+    description: 'Private SSH key to clone the private repository'  
     required: true
