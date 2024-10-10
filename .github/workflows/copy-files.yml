@@ -1,0 +1,44 @@
+name: Copy Files from Private Repo  
+  
+on:  
+  schedule:  
+    - cron: '0 0 * * *'  # 每天午夜运行  
+  
+jobs:  
+  copy-files:  
+    runs-on: ubuntu-latest  
+    steps:  
+      - name: Checkout Main Repo  
+        uses: actions/checkout@v2  
+  
+      - name: Set up Python  
+        uses: actions/setup-python@v2  
+        with:  
+          python-version: '3.x'  
+  
+      - name: Install Git  
+        run: sudo apt-get install git -y  
+  
+      - name: Clone Private Repo  
+        env:  
+          PRIVATE_REPO_URL: ${{ secrets.PRIVATE_REPO_URL }}  
+          PRIVATE_REPO_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}  
+        run: |  
+          git clone https://x-access-token:${PRIVATE_REPO_TOKEN}@github.com/${PRIVATE_REPO_URL}.git private-repo  
+  
+      - name: Copy Files  
+        run: |  
+          python copy_files.py private-repo/tv  
+  
+      - name: Commit Changes  
+        run: |  
+          git config --local user.email "action@github.com"  
+          git config --local user.name "GitHub Action"  
+          git add .  
+          # Only commit if there are changes  
+          if git diff-index --quiet HEAD --; then  
+            echo "No changes to commit"  
+          else  
+            git commit -m "Copied files from private repo's tv directory"  
+            git push  
+          fi
