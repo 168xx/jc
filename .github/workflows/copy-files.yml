@@ -14,14 +14,12 @@ jobs:
         uses: actions/checkout@v3  
   
       - name: Set up SSH keys  
-        # 这里假设你已经在 GitHub 上为目标私有仓库添加了可部署密钥，并且私钥已经作为 secret 存储在当前仓库中  
         env:  
           SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}  
         run: |  
           mkdir -p ~/.ssh  
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa  
           chmod 600 ~/.ssh/id_rsa  
-          # 添加 GitHub 的 SSH 密钥指纹到 known_hosts（这一步可能不是必需的，取决于你的配置）  
           ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts  
   
       - name: Add SSH key to ssh-agent  
@@ -50,8 +48,7 @@ jobs:
               echo "No changes to commit"  
           fi  
   
-    # 可选的清理步骤，用于删除敏感信息  
-    post-jobs:  
+      # 清理步骤，放在同一个 job 的最后  
       - name: Cleanup  
         if: always()  # 无论作业成功还是失败都运行  
         run: |  
