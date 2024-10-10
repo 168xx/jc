@@ -2,43 +2,42 @@ name: Copy Files from Private Repo
   
 on:  
   workflow_dispatch:  # 手动触发工作流  
-  # 你也可以设置定时触发，比如每天凌晨 1 点：  
-  # schedule:  
-  #   - cron: '0 1 * * *'  
   
 jobs:  
   copy-files:  
     runs-on: ubuntu-latest  
+  
+    env:  
+      PRIVATE_REPO_URL: github.com/168xx/zdgx.git  # 私有仓库的 URL  
+      PRIVATE_REPO_BRANCH: zdgx  # 私有仓库的分支名  
+      SOURCE_FOLDER: tv  # 源文件夹  
+      TARGET_FOLDER: live  # 目标文件夹  
+      GITHUB_TOKEN: ${{ secrets.YOUR_PERSONAL_ACCESS_TOKEN }}  # 你的个人访问令牌，需要具有对私有仓库的读取权限和对当前仓库的写入权限  
+  
     steps:  
-      - name: Checkout target repository  
-        uses: actions/checkout@v2  
-        with:  
-          path: target-repo  
+    - name: Checkout current repo  
+      uses: actions/checkout@v3  
   
-      - name: Set up Git credentials  
-        run: |  
-          git config --global url."https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"  
-          echo "GITHUB_TOKEN=${PERSONAL_ACCESS_TOKEN}" >> ${GIT_CONFIG}  
-        env:  
-          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}  # 确保在仓库的 Secrets 中存储了这个 PAT  
-          GIT_CONFIG: $(mktemp)  
+    - name: Clone private repo  
+      run: |  
+        git clone https://x-access-token:${GITHUB_TOKEN}@${PRIVATE_REPO_URL} private-repo  
+        cd private-repo  
+        git checkout ${PRIVATE_REPO_BRANCH}  
   
-      - name: Clone private repository  
-        run: |  
-          git clone https://github.com/168xx/zdgx.git private-repo  
-          cd private-repo  
-          # 假设你的私有仓库的默认分支是 main  
-          git checkout main  
+    - name: Copy files  
+      run: |  
+        cp -r private-repo/${SOURCE_FOLDER}/*.{txt,m3u} ${GITHUB_WORKSPACE}/${TARGET_FOLDER}/  
   
-      - name: Copy .txt and .m3u files to target repository  
-        run: |  
-          cp -r private-repo/tv/*.txt private-repo/tv/*.m3u target-repo/live/  
+
+     - name: Commit and push changes  
+       run: |  
+         git config --global user.name 'github-actions'  
+         git config --global user.email 'github-actions@github.com'  
+         git add ${TARGET_FOLDER}/  
+         git commit -m "Copied files from private repo"  
+         git push origin HEAD:${YOUR_BRANCH_NAME}  
   
-      - name: Commit and push changes  
-        run: |  
-          cd target-repo  
-          git config --local user.email "your-email@example.com"  
-          git config --local user.name "your-username"  
-          git add live/  
-          git commit -m "Copied .txt and .m3u files from private repository" || true  
-          git push
+    # 清理工作目录  
+    - name: Cleanup  
+      if: always()  
+      run: rm -rf private-repo
