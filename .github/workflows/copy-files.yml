@@ -1,29 +1,37 @@
 name: Copy Files from Private Repo  
   
 on:  
-  workflow_dispatch:  # 手动触发，或者根据需要设置为其他事件，如定时触发  
+  workflow_dispatch:  # 手动触发  
   
 jobs:  
   copy-files:  
     runs-on: ubuntu-latest  
     permissions:  
       contents: 'write'  # 允许写入当前仓库的内容  
-      repositories: 'read'  # 允许读取其他仓库的内容（需要额外的配置）  
   
     steps:  
       - name: Checkout current repository  
-        uses: actions/checkout@v2  
+        uses: actions/checkout@v3  
   
-      - name: Set up Git  
+      - name: Set up SSH keys  
+        # 这里假设你已经在 GitHub 上为目标私有仓库添加了可部署密钥，并且私钥已经作为 secret 存储在当前仓库中  
+        env:  
+          SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_REPO_SSH_PRIVATE_KEY }}  
         run: |  
-          git config --global user.name 'github-actions'  
-          git config --global user.email 'github-actions@github.com'  
+          mkdir -p ~/.ssh  
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa  
+          chmod 600 ~/.ssh/id_rsa  
+          # 添加 GitHub 的 SSH 密钥指纹到 known_hosts（这一步可能不是必需的，取决于你的配置）  
+          ssh-keyscan -t rsa github.com >> ~/.ssh/known_hosts  
+  
+      - name: Add SSH key to ssh-agent  
+        run: |  
+          eval "$(ssh-agent -s)"  
+          ssh-add ~/.ssh/id_rsa  
   
       - name: Clone private repository  
-        env:  
-          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  # 在仓库的 Settings > Secrets 中添加此个人访问令牌  
         run: |  
-          git clone https://${PRIVATE_REPO_PAT}:@github.com/168xx/zdgx.git private-repo  
+          git clone git@github.com:168xx/zdgx.git private-repo  
   
       - name: Copy txt and m3u files to live folder  
         run: |  
@@ -32,8 +40,20 @@ jobs:
   
       - name: Commit and push changes  
         run: |  
+          git config --global user.name 'github-actions'  
+          git config --global user.email 'github-actions@github.com'  
           git add live  
           if [ -n "$(git status --porcelain)" ]; then  
               git commit -m "Copied txt and m3u files from private repo"  
               git push  
-          fi
+          else  
+              echo "No changes to commit"  
+          fi  
+  
+    # 可选的清理步骤，用于删除敏感信息  
+    post-jobs:  
+      - name: Cleanup  
+        if: always()  # 无论作业成功还是失败都运行  
+        run: |  
+          rm -rf ~/.ssh/id_rsa  
+          rm -rf ~/.ssh/known_hosts
