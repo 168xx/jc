@@ -1,7 +1,7 @@
 name: Copy Files from Private Repo  
   
 on:  
-  workflow_dispatch:  # 你可以根据需要修改为其他触发事件，比如定时任务  
+  workflow_dispatch:  # 手动触发工作流  
   
 jobs:  
   copy-files:  
@@ -19,30 +19,26 @@ jobs:
   
       - name: Clone Private Repo  
         env:  
-          PRIVATE_REPO_URL: ${{ secrets.PRIVATE_REPO_URL }}  
-          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  
+          PRIVATE_REPO_URL: ${{ secrets.PRIVATE_REPO_URL }}  # 替换为你的私有仓库URL（去掉https://github.com/和.git）  
+          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  # 替换为你的个人访问令牌  
         run: |  
-          git clone https://${PRIVATE_REPO_PAT}@github.com/${PRIVATE_REPO_URL}.git private-repo  
+          git clone https://${PRIVATE_REPO_PAT}:x-oauth-basic@github.com/${PRIVATE_REPO_URL}.git private-repo  
   
-   - name: Copy Specific Files  
+      - name: Copy Specific Files  
         run: |  
-          python3 copy_files.py private-repo/tv  
-        working-directory: ${{ github.workspace }}
+          python3 copy_files.py private-repo/path/to/directory  # 替换为私有仓库中文件的实际路径  
+        working-directory: ${{ github.workspace }}  
   
       - name: Stage Changes  
         run: |  
           git config --local user.email "github-actions@github.com"  
           git config --local user.name "github-actions"  
-          for file in *.txt *.m3u; do  
-            if [ -f "$file" ]; then  
-              git add "$file"  
-            fi  
-          done  
+          git add *.txt *.m3u  # 添加所有.txt和.m3u文件到暂存区  
   
       - name: Commit and Push Changes  
         run: |  
           if [ -n "$(git status --porcelain)" ]; then  
-            git commit -m "Copied files from private repo's tv directory"  
+            git commit -m "Copied files from private repo"  
             git push  
           else  
             echo "No changes to commit"  
