@@ -1,46 +1,44 @@
 name: Copy Files from Private Repo  
   
 on:  
-  workflow_dispatch:  
+  workflow_dispatch:  # 手动触发工作流  
+  # 你也可以设置定时触发，比如每天凌晨 1 点：  
+  # schedule:  
+  #   - cron: '0 1 * * *'  
   
 jobs:  
   copy-files:  
     runs-on: ubuntu-latest  
-    permissions:  
-      contents: write  
     steps:  
-      - name: Checkout Main Repo  
-        uses: actions/checkout@v3  
-  
-      - name: Set up Python  
-        uses: actions/setup-python@v3  
+      - name: Checkout target repository  
+        uses: actions/checkout@v2  
         with:  
-          python-version: '3.x'  
+          path: target-repo  
   
-      - name: Clone Private Repo  
+      - name: Set up Git credentials  
+        run: |  
+          git config --global url."https://${GITHUB_ACTOR}:${GITHUB_TOKEN}@github.com/".insteadOf "https://github.com/"  
+          echo "GITHUB_TOKEN=${PERSONAL_ACCESS_TOKEN}" >> ${GIT_CONFIG}  
         env:  
-          PRIVATE_REPO_URL: ${{ secrets.PRIVATE_REPO_URL }}  
-          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  
-        run: |  
-          git clone https://${PRIVATE_REPO_PAT}:x-oauth-basic@github.com/${PRIVATE_REPO_URL}.git private-repo  
+          GITHUB_TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}  # 确保在仓库的 Secrets 中存储了这个 PAT  
+          GIT_CONFIG: $(mktemp)  
   
-      - name: Copy Specific Files  
+      - name: Clone private repository  
         run: |  
-          python3 copy_files.py private-repo/path/to/source main-repo-files  # 替换为私有仓库中的源路径和目标目录  
-        working-directory: ${{ github.workspace }}  
+          git clone https://github.com/168xx/zdgx.git private-repo  
+          cd private-repo  
+          # 假设你的私有仓库的默认分支是 main  
+          git checkout main  
   
-      - name: Stage Changes  
+      - name: Copy .txt and .m3u files to target repository  
         run: |  
-          git config --local user.email "github-actions@github.com"  
-          git config --local user.name "github-actions"  
-          # 只添加 main-repo-files 目录下的 .txt 和 .m3u 文件  
-          find main-repo-files -type f \( -iname "*.txt" -o -iname "*.m3u" \) -exec git add {} \;  
+          cp -r private-repo/tv/*.txt private-repo/tv/*.m3u target-repo/live/  
   
-      - name: Commit and Push Changes  
+      - name: Commit and push changes  
         run: |  
-          if [ -n "$(git status --porcelain)" ]; then  
-            git commit -m "Copied files from private repo"  
-            git push  
-          else  
-            echo "No changes to commit"  
-          fi
+          cd target-repo  
+          git config --local user.email "your-email@example.com"  
+          git config --local user.name "your-username"  
+          git add live/  
+          git commit -m "Copied .txt and .m3u files from private repository" || true  
+          git push
