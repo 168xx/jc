@@ -1,44 +1,49 @@
 name: Copy Files from Private Repo  
   
 on:  
-  schedule:  
-    - cron: '0 0 * * *'  # 每天午夜运行  
+  workflow_dispatch:  # 你可以根据需要修改为其他触发事件，比如定时任务  
   
 jobs:  
   copy-files:  
     runs-on: ubuntu-latest  
+    permissions:  
+      contents: write  # 允许对工作区的内容进行写操作  
     steps:  
       - name: Checkout Main Repo  
-        uses: actions/checkout@v2  
+        uses: actions/checkout@v3  
   
       - name: Set up Python  
-        uses: actions/setup-python@v2  
+        uses: actions/setup-python@v3  
         with:  
           python-version: '3.x'  
-  
-      - name: Install Git  
-        run: sudo apt-get install git -y  
   
       - name: Clone Private Repo  
         env:  
           PRIVATE_REPO_URL: ${{ secrets.PRIVATE_REPO_URL }}  
-          PRIVATE_REPO_TOKEN: ${{ secrets.PRIVATE_REPO_TOKEN }}  
+          PRIVATE_REPO_PAT: ${{ secrets.PRIVATE_REPO_PAT }}  
         run: |  
-          git clone https://x-access-token:${PRIVATE_REPO_TOKEN}@github.com/${PRIVATE_REPO_URL}.git private-repo  
+          git clone https://${PRIVATE_REPO_PAT}@github.com/${PRIVATE_REPO_URL}.git private-repo  
   
-      - name: Copy Files  
+      - name: Copy Specific Files  
         run: |  
-          python copy_files.py private-repo/tv  
+          python3 <<path-to-your-script>>/copy_files.py private-repo/tv  
+        working-directory: ${{ github.workspace }}  # 确保工作目录设置正确  
   
-      - name: Commit Changes  
+      - name: Stage Changes  
         run: |  
-          git config --local user.email "action@github.com"  
-          git config --local user.name "GitHub Action"  
-          git add .  
-          # Only commit if there are changes  
-          if git diff-index --quiet HEAD --; then  
-            echo "No changes to commit"  
-          else  
+          git config --local user.email "github-actions@github.com"  
+          git config --local user.name "github-actions"  
+          for file in *.txt *.m3u; do  
+            if [ -f "$file" ]; then  
+              git add "$file"  
+            fi  
+          done  
+  
+      - name: Commit and Push Changes  
+        run: |  
+          if [ -n "$(git status --porcelain)" ]; then  
             git commit -m "Copied files from private repo's tv directory"  
             git push  
+          else  
+            echo "No changes to commit"  
           fi
